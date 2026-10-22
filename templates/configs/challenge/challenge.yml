@@ -1,0 +1,40 @@
+challenge:
+  # Pool of extensions published to miners. Path is inside the container.
+  pool_path: "/app/rest-bex-challenge/extensions.yml"
+
+  # T - rounds per /score call. Each round is one browser launch.
+  n_rounds: 6
+
+  # Extensions enabled per round, drawn with `secrets`, never revealed.
+  # INVARIANT: k must be < the number of entries in pool_path, or
+  # build_round_schedule() raises. Today's pool has 89 entries.
+  k: 12
+  ## Weight each draw toward least-used extensions; 1.0 = uniform.
+  ## Uniform leaves ~2.7 of 25 never enabled per run.
+  coverage_bias: 2.0
+
+  # Wait after page load for extensions to act. Covers the SLOWER of two
+  # clocks, measured by scripts/audit_activity.py:
+  #   DOM settles      by ~3.5s (LastPass is the slowest)
+  #   DNR rulesets bite at ~5s  (sample earlier and every blocker reads inert)
+  settle_seconds: 6.0
+
+  # Hard cap on the miner script.
+  script_budget_sec: 10.0
+
+  submission_max_lines: 750
+  submission_max_bytes: 262144
+
+  # api_key is deliberately NOT set here - this file is committed. Supply it via
+  # BEX_CHALLENGE_API_KEY or /run/secrets.
+
+  browser:
+    chrome_bin: "/opt/chrome/browser/chrome"
+    chromedriver_bin: "/opt/chrome/driver/chromedriver"
+    extensions_dir: "/opt/extensions"
+    scratch_dir: "/run/exc"
+    # Prod is always headless. False only for local dev under Xvfb.
+    headless: true
+    # Prefer shm_size: 2gb on the container over this flag.
+    shm_fallback: false
+    page_load_timeout_sec: 30.0

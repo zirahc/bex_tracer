@@ -1,0 +1,12 @@
+services:
+  miner-api:
+    image: redteamsubnet61/submission-exc-challenge:latest
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      TERM: ${TERM:-xterm}
+      TZ: ${TZ:-KST}
+    ports:
+      - 10002:10002
+    tty: true

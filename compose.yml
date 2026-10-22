@@ -1,0 +1,21 @@
+services:
+  challenge-api:
+    image: redteamsubnet61/rest-bex-challenge:1.0.0
+    build:
+      context: .
+      dockerfile: ./src/bex_tracer/challenge/Dockerfile
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      CHALLENGE_API_KEY: ${BEX_CHALLENGE_API_KEY:?"BEX_CHALLENGE_API_KEY is not set in .env"}
+      BEX_API_PORT: ${BEX_API_PORT:-10001}
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./volumes/configs/rest-bex-challenge:/etc/rest-bex-challenge
+      - ./volumes/storage/rest-bex-challenge/logs:/var/log/rest-bex-challenge
+    shm_size: "2g"
+    ports:
+      - "${BEX_API_PORT:-10001}:${BEX_API_PORT:-10001}"
+    tty: true

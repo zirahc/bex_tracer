@@ -1,0 +1,129 @@
+from pydantic import BaseModel, Field, field_validator
+
+from potato_util.generator import gen_random_string
+
+from api.config import config
+
+from ._pool import load_pool_groups
+from .utils import DETECTIONS_DIR, stub_source
+
+
+def _detection_examples() -> list[dict[str, str]]:
+    """The OpenAPI example for `commit_files` - EVERY group file, not one.
+
+    Swagger pre-fills the request body from this and `_check_commit_files`
+    requires one file per group, so a single-file example is not unhelpful but
+    INVALID: Try-it-out would 422 and read like a broken endpoint.
+
+    Content comes from the checked-in files under
+    `templates/static/detections`. A missing pool or file degrades the example
+    rather than breaking the import.
+    """
+    try:
+        _groups = list(load_pool_groups())
+    except Exception:  # noqa: BLE001 - an example must never break startup
+        _groups = ["detect"]
+
+    _examples: list[dict[str, str]] = []
+    for _group in _groups:
+        _file_name = f"{_group}.js"
+        try:
+            _content = (DETECTIONS_DIR / _file_name).read_text(encoding="utf-8")
+        except OSError:
+            _content = stub_source(_group)
+        _examples.append({"file_name": _file_name, "content": _content})
+    return _examples
+
+
+class CommitFilePM(BaseModel):
+    file_name: str = Field(
+        ...,
+        min_length=4,
+        max_length=64,
+        title="File Name",
+        description="`<group>.js`, one per group published by GET /task.",
+    )
+    content: str = Field(
+        ...,
+        min_length=2,
+        title="File Content",
+        description="Content of the file as a string.",
+    )
+
+
+class MinerOutput(BaseModel):
+    commit_files: list[CommitFilePM] = Field(
+        ...,
+        title="Commit Files",
+        description="One file per group published by GET /task, named "
+        "`<group>.js` and defining `window.detect_<group>`. ALL groups are "
+        "required - a missing or unexpected file name is rejected.",
+        examples=[_detection_examples()],
+    )
+
+    @field_validator("commit_files", mode="after")
+    @classmethod
+    def _check_commit_files(cls, val: list[CommitFilePM]) -> list[CommitFilePM]:
+        _max_lines: int = config.challenge.submission_max_lines
+        _max_bytes: int = config.challenge.submission_max_bytes
+        _expected_names = {f"{_group}.js" for _group in load_pool_groups()}
+
+        _file_names = [_miner_file_pm.file_name for _miner_file_pm in val]
+        if len(_file_names) != len(_expected_names) or set(_file_names) != _expected_names:
+            raise ValueError(
+                f"expected exactly one file per group ({sorted(_expected_names)}), "
+                f"got {sorted(_file_names)}!"
+            )
+
+        for _miner_file_pm in val:
+            _content_lines = _miner_file_pm.content.splitlines()
+            if len(_content_lines) > _max_lines:
+                raise ValueError(
+                    f"`{_miner_file_pm.file_name}` file contains too many lines, should be <= {_max_lines} lines!"
+                )
+            _size = len(_miner_file_pm.content.encode("utf-8"))
+            if _size > _max_bytes:
+                raise ValueError(
+                    f"`{_miner_file_pm.file_name}` is {_size} bytes, should be <= {_max_bytes} bytes!"
+                )
+
+        return val
+
+
+class RoundReportPM(BaseModel):
+    """One round, as reported by `RoundRecord.as_public_dict()`."""
+
+    index: int = Field(..., description="round number within the run")
+    status: str = Field(..., description="completed, failed or infra_failed")
+    n_enabled: int = Field(..., description="how many extensions were enabled")
+    score: float = Field(..., description="this round's clamped MCC")
+    failed: bool = Field(..., description="whether the round raised")
+    duration_sec: float | None = Field(None, description="wall time for the round")
+    detected_extensions: list[str] = Field(
+        ...,
+        description="extension names detected by the miner in this round",
+    )
+
+
+class RunReportPM(BaseModel):
+    """Outcome of the most recent scoring run.
+
+    Includes the detected extension names for each round, but no expected labels
+    or error text. Declaring the shape here also means a field added to
+    `report()` later cannot reach the response without being added to this model.
+    """
+
+    pool_size: int
+    n_rounds: int
+    n_completed: int
+    n_scored: int
+    score: float
+    rounds: list[RoundReportPM]
+
+
+__all__ = [
+    "CommitFilePM",
+    "MinerOutput",
+    "RoundReportPM",
+    "RunReportPM",
+]
