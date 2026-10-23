@@ -33,8 +33,8 @@ pool:
   - name: "AdGuard AdBlocker"
     group: ad_blockers
     id: bgnkhhnnamicmpeenaelnjfhikgbkllg
-    version: "5.5.3.21"
-    sha256: "5dcb3d783ec7a7712f4b1f4f66258f7d1edb22f6b30c12b06bc6ce848d60f98f"
+    version: "5.5.3.22"
+    sha256: "ef5b27d718ce75bf296fba870aa33228822591111328415ad16e3a70d268fc3a"
 
   - name: "AdBlocker Ultimate"
     group: ad_blockers
@@ -344,8 +344,8 @@ pool:
   - name: "PrintFriendly"
     group: save_research
     id: ohlencieiipommannpdfcmfdpjjmeolj
-    version: "7.3.4"
-    sha256: "a22ab5e0955b4863e05f8bd607183aec8497930fd79291e34cec5e9d85e770d1"
+    version: "7.3.5"
+    sha256: "125c0e45ea3dc47749b64c09ad00d7ddc51a4ea3998a4e3cdf98c9009c6406a1"
 
   - name: "Kami for Google Chrome"
     group: save_research
